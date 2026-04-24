@@ -1,0 +1,344 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  TECHNICIAN
+  REQUESTER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum DemandType {
+  INCIDENT
+  REQUEST
+  IMPROVEMENT
+  PROJECT
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum DemandStatus {
+  OPEN
+  IN_TRIAGE
+  IN_PROGRESS
+  WAITING_THIRD_PARTY
+  IN_VALIDATION
+  CLOSED
+  CANCELLED
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  WAITING_THIRD_PARTY
+  COMPLETED
+  CANCELLED
+}
+
+enum SOStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+model User {
+  id           String     @id @default(cuid())
+  name         String
+  matricula    String     @unique
+  role         UserRole   @default(TECHNICIAN)
+  sector       String
+  email        String     @unique
+  passwordHash String
+  mfaSecret    String?
+  mfaEnabled   Boolean    @default(false)
+  status       UserStatus @default(ACTIVE)
+  lastLoginAt  DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  demandsCreated       Demand[]             @relation("DemandCreator")
+  demandsAssigned      Demand[]             @relation("DemandAssignee")
+  tasks                Task[]
+  auditLogs            AuditLog[]
+  notifications        Notification[]
+  comments             Comment[]
+  serviceOrdersExecuted ServiceOrder[]      @relation("ServiceOrderExecutor")
+  timeEntries          TimeEntry[]
+  refreshTokens        RefreshToken[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("refresh_tokens")
+}
+
+model Unit {
+  id        String   @id @default(cuid())
+  name      String
+  code      String   @unique
+  type      String?
+  address   String?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  demands Demand[]
+
+  @@map("units")
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String
+  type      String
+  color     String   @default("#6366f1")
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  demands Demand[]
+
+  @@map("categories")
+}
+
+model Demand {
+  id           String       @id @default(cuid())
+  number       String       @unique
+  type         DemandType
+  title        String
+  description  String
+  unitId       String
+  unit         Unit         @relation(fields: [unitId], references: [id])
+  categoryId   String?
+  category     Category?    @relation(fields: [categoryId], references: [id])
+  priority     Priority     @default(MEDIUM)
+  status       DemandStatus @default(OPEN)
+  createdById  String
+  createdBy    User         @relation("DemandCreator", fields: [createdById], references: [id])
+  assignedToId String?
+  assignedTo   User?        @relation("DemandAssignee", fields: [assignedToId], references: [id])
+  slaDueDate   DateTime?
+  slaBreached  Boolean      @default(false)
+  closedAt     DateTime?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  tasks         Task[]
+  serviceOrders ServiceOrder[]
+  attachments   Attachment[]
+  comments      Comment[]
+  statusHistory DemandStatusHistory[]
+
+  @@map("demands")
+}
+
+model DemandStatusHistory {
+  id          String        @id @default(cuid())
+  demandId    String
+  demand      Demand        @relation(fields: [demandId], references: [id])
+  fromStatus  DemandStatus?
+  toStatus    DemandStatus
+  changedById String?
+  reason      String?
+  createdAt   DateTime      @default(now())
+
+  @@map("demand_status_history")
+}
+
+model Task {
+  id           String     @id @default(cuid())
+  demandId     String
+  demand       Demand     @relation(fields: [demandId], references: [id])
+  title        String
+  description  String?
+  assignedToId String?
+  assignedTo   User?      @relation(fields: [assignedToId], references: [id])
+  dueDate      DateTime?
+  status       TaskStatus @default(PENDING)
+  timeSpent    Int        @default(0)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  attachments   Attachment[]
+  comments      Comment[]
+  timeEntries   TimeEntry[]
+  statusHistory TaskStatusHistory[]
+
+  @@map("tasks")
+}
+
+model TaskStatusHistory {
+  id          String      @id @default(cuid())
+  taskId      String
+  task        Task        @relation(fields: [taskId], references: [id])
+  fromStatus  TaskStatus?
+  toStatus    TaskStatus
+  changedById String?
+  reason      String?
+  createdAt   DateTime    @default(now())
+
+  @@map("task_status_history")
+}
+
+model TimeEntry {
+  id          String   @id @default(cuid())
+  taskId      String
+  task        Task     @relation(fields: [taskId], references: [id])
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  minutes     Int
+  description String?
+  startedAt   DateTime
+  createdAt   DateTime @default(now())
+
+  @@map("time_entries")
+}
+
+model ServiceOrder {
+  id          String   @id @default(cuid())
+  number      String   @unique
+  demandId    String
+  demand      Demand   @relation(fields: [demandId], references: [id])
+  title       String
+  description String
+  executorId  String?
+  executor    User?    @relation("ServiceOrderExecutor", fields: [executorId], references: [id])
+  status      SOStatus @default(OPEN)
+  startDate   DateTime?
+  endDate     DateTime?
+  signature   String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  checklists SOChecklist[]
+
+  @@map("service_orders")
+}
+
+model SOChecklist {
+  id             String       @id @default(cuid())
+  serviceOrderId String
+  serviceOrder   ServiceOrder @relation(fields: [serviceOrderId], references: [id])
+  item           String
+  completed      Boolean      @default(false)
+  completedAt    DateTime?
+  sortOrder      Int          @default(0)
+
+  @@map("so_checklists")
+}
+
+model SLAConfig {
+  id             String     @id @default(cuid())
+  demandType     DemandType
+  priority       Priority
+  responseTime   Int
+  resolutionTime Int
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@unique([demandType, priority])
+  @@map("sla_configs")
+}
+
+model Attachment {
+  id           String   @id @default(cuid())
+  demandId     String?
+  demand       Demand?  @relation(fields: [demandId], references: [id])
+  taskId       String?
+  task         Task?    @relation(fields: [taskId], references: [id])
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  url          String
+  uploadedById String?
+  createdAt    DateTime @default(now())
+
+  @@map("attachments")
+}
+
+model Comment {
+  id        String   @id @default(cuid())
+  demandId  String?
+  demand    Demand?  @relation(fields: [demandId], references: [id])
+  taskId    String?
+  task      Task?    @relation(fields: [taskId], references: [id])
+  content   String
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("comments")
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  type      String
+  title     String
+  content   String
+  read      Boolean   @default(false)
+  readAt    DateTime?
+  metadata  Json?
+  createdAt DateTime  @default(now())
+
+  @@map("notifications")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  action     String
+  entityType String
+  entityId   String?
+  oldValue   Json?
+  newValue   Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@map("audit_logs")
+}
+
+model WorkflowConfig {
+  id           String        @id @default(cuid())
+  demandType   DemandType
+  fromStatus   DemandStatus?
+  toStatus     DemandStatus
+  requiredRole UserRole?
+  isAutomatic  Boolean       @default(false)
+  conditions   Json?
+  active       Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@map("workflow_configs")
+}
