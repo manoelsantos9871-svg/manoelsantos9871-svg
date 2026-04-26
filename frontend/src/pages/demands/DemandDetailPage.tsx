@@ -4,7 +4,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Clock, User, Tag, AlertTriangle, MessageSquare, CheckSquare, Send } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Button from '@/components/ui/Button';
-import Select from '@/components/ui/Select';
 import { LoadingPage } from '@/components/ui/Loading';
 import { demandsService } from '@/services/demands.service';
 import {
@@ -32,7 +31,7 @@ export default function DemandDetailPage() {
   });
 
   const statusMutation = useMutation({
-    mutationFn: (status: string) => demandsService.updateStatus(id!, status),
+    mutationFn: (status: string) => demandsService.updateStatus(id!, status as DemandStatus),
     onSuccess: () => {
       toast.success('Status atualizado');
       qc.invalidateQueries({ queryKey: ['demand', id] });
@@ -43,7 +42,7 @@ export default function DemandDetailPage() {
   });
 
   const commentMutation = useMutation({
-    mutationFn: (content: string) => demandsService.addComment(id!, content),
+    mutationFn: (content: string) => demandsService.addComment(id!, content, user!.id, user!.name),
     onSuccess: () => {
       toast.success('Comentário adicionado');
       qc.invalidateQueries({ queryKey: ['demand', id] });
@@ -168,7 +167,7 @@ export default function DemandDetailPage() {
             <div className="card p-5">
               <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Histórico de Status</h3>
               <div className="space-y-2">
-                {demand.statusHistory.map((h, i) => (
+                {demand.statusHistory.map((h) => (
                   <div key={h.id} className="flex items-start gap-3">
                     <div className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full bg-primary-400" />
                     <div>

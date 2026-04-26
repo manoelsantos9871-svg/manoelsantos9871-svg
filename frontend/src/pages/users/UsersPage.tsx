@@ -34,7 +34,7 @@ export default function UsersPage() {
   const { register, handleSubmit, reset, formState: { errors } } = useForm<CreateForm>();
 
   const createMutation = useMutation({
-    mutationFn: (d: CreateForm) => usersService.create(d),
+    mutationFn: (d: CreateForm) => usersService.create(d as Record<string, unknown>),
     onSuccess: () => {
       toast.success('Usuário criado com sucesso!');
       qc.invalidateQueries({ queryKey: ['users'] });

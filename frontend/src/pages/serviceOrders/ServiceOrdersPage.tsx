@@ -39,7 +39,7 @@ export default function ServiceOrdersPage() {
   const [statusFilter, setStatusFilter] = useState('');
   const [showCreate, setShowCreate] = useState(false);
 
-  const params = { page, limit: 15, search, ...(statusFilter && { status: statusFilter }) };
+  const params = { page: String(page), limit: '15', search, ...(statusFilter && { status: statusFilter }) };
   const { data, isLoading } = useQuery({ queryKey: ['service-orders', params], queryFn: () => serviceOrdersService.findAll(params) });
   const { data: techUsers } = useQuery({ queryKey: ['users-all'], queryFn: () => usersService.findAll({ status: 'ACTIVE', limit: '100' }) });
   const { data: demands } = useQuery({ queryKey: ['demands-list'], queryFn: () => demandsService.findAll({ limit: 100 }) });

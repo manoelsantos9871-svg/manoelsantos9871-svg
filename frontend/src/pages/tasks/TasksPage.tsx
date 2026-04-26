@@ -15,8 +15,8 @@ import { tasksService } from '@/services/tasks.service';
 import { usersService } from '@/services/users.service';
 import { demandsService } from '@/services/demands.service';
 import { TASK_STATUS_LABELS, TASK_STATUS_COLORS } from '@/utils/constants';
-import { formatDate, formatRelative, formatMinutes } from '@/utils/formatters';
-import { Task, TaskStatus } from '@/types';
+import { formatDate, formatMinutes } from '@/utils/formatters';
+import { Task } from '@/types';
 import { useAuthStore } from '@/store/auth.store';
 
 const STATUSES = Object.entries(TASK_STATUS_LABELS).map(([v, l]) => ({ value: v, label: l }));

@@ -2,7 +2,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, CheckSquare, Square } from 'lucide-react';
 import toast from 'react-hot-toast';
-import Button from '@/components/ui/Button';
 import { LoadingPage } from '@/components/ui/Loading';
 import { serviceOrdersService } from '@/services/serviceOrders.service';
 import { SO_STATUS_LABELS } from '@/utils/constants';

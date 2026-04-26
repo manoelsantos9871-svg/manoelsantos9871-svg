@@ -96,7 +96,7 @@ export default function ReportsPage() {
                 <YAxis tick={{ fontSize: 11 }} />
                 <Tooltip
                   contentStyle={{ fontSize: 12, borderRadius: 8 }}
-                  formatter={(v: number, _n, props) => [formatMinutes(props.payload.minutos), 'Tempo médio']}
+                  formatter={(_v: number, _n, props) => [formatMinutes(props.payload.minutos), 'Tempo médio']}
                 />
                 <Bar dataKey="horas" name="Horas" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
               </BarChart>
