@@ -136,25 +136,19 @@ export const demandsService = {
   },
 
   async findById(id: string): Promise<Demand> {
-    const snap = await getDoc(doc(db, 'demands', id));
+    const [snap, commentsSnap, historySnap] = await Promise.all([
+      getDoc(doc(db, 'demands', id)),
+      getDocs(query(collection(db, 'demands', id, 'comments'), orderBy('createdAt', 'asc'))),
+      getDocs(query(collection(db, 'demands', id, 'history'), orderBy('createdAt', 'asc'))),
+    ]);
     if (!snap.exists()) throw new Error('Demand not found');
     const demand = docToDemand(snap.id, snap.data());
-
-    // Fetch comments subcollection
-    const commentsSnap = await getDocs(
-      query(collection(db, 'demands', id, 'comments'), orderBy('createdAt', 'asc')),
-    );
     demand.comments = commentsSnap.docs.map((c) => ({
       id: c.id,
       content: c.data().content ?? '',
       author: c.data().author ?? { id: '', name: '' },
       createdAt: tsToIso(c.data().createdAt),
     }));
-
-    // Fetch history subcollection
-    const historySnap = await getDocs(
-      query(collection(db, 'demands', id, 'history'), orderBy('createdAt', 'asc')),
-    );
     demand.statusHistory = historySnap.docs.map((h) => ({
       id: h.id,
       fromStatus: h.data().fromStatus,
@@ -163,18 +157,15 @@ export const demandsService = {
       reason: h.data().reason,
       createdAt: tsToIso(h.data().createdAt),
     }));
-
     return demand;
   },
 
   async create(payload: Record<string, unknown>): Promise<Demand> {
     const now = new Date();
-    const number = await getNextDemandNumber();
-    const slaDue = await calculateSlaDueDate(
-      payload.type as string,
-      payload.priority as string,
-      now,
-    );
+    const [number, slaDue] = await Promise.all([
+      getNextDemandNumber(),
+      calculateSlaDueDate(payload.type as string, payload.priority as string, now),
+    ]);
 
     const docData = {
       ...payload,
