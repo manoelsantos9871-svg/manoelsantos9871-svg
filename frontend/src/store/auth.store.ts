@@ -1,28 +1,42 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { User as FirebaseUser } from 'firebase/auth';
 import { User } from '@/types';
 
 interface AuthState {
   user: User | null;
-  accessToken: string | null;
-  refreshToken: string | null;
+  firebaseUser: FirebaseUser | null;
   isAuthenticated: boolean;
+  loading: boolean;
   setUser: (user: User) => void;
-  setTokens: (accessToken: string, refreshToken: string) => void;
+  setFirebaseUser: (firebaseUser: FirebaseUser | null) => void;
   logout: () => void;
+  initialize: (firebaseUser: FirebaseUser | null, user: User | null) => void;
 }
 
-export const useAuthStore = create<AuthState>()(
-  persist(
-    (set) => ({
+export const useAuthStore = create<AuthState>()((set) => ({
+  user: null,
+  firebaseUser: null,
+  isAuthenticated: false,
+  loading: true,
+
+  setUser: (user) => set({ user, isAuthenticated: true }),
+
+  setFirebaseUser: (firebaseUser) =>
+    set({ firebaseUser, isAuthenticated: !!firebaseUser }),
+
+  logout: () =>
+    set({
       user: null,
-      accessToken: null,
-      refreshToken: null,
+      firebaseUser: null,
       isAuthenticated: false,
-      setUser: (user) => set({ user, isAuthenticated: true }),
-      setTokens: (accessToken, refreshToken) => set({ accessToken, refreshToken }),
-      logout: () => set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false }),
+      loading: false,
     }),
-    { name: 'healthtech-auth', partialize: (s) => ({ accessToken: s.accessToken, refreshToken: s.refreshToken }) },
-  ),
-);
+
+  initialize: (firebaseUser, user) =>
+    set({
+      firebaseUser,
+      user,
+      isAuthenticated: !!firebaseUser,
+      loading: false,
+    }),
+}));

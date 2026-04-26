@@ -1,4 +1,4 @@
-name: Deploy — Firebase Hosting
+name: Deploy to Firebase
 
 on:
   push:
@@ -6,8 +6,8 @@ on:
       - claude/healthcare-task-management-m4DfU
 
 jobs:
-  deploy-frontend:
-    name: Frontend → Firebase Hosting
+  deploy:
+    name: Build & Deploy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,10 +21,15 @@ jobs:
       - name: Build frontend
         working-directory: frontend
         env:
-          VITE_API_URL: ${{ secrets.BACKEND_URL }}
+          VITE_FIREBASE_API_KEY: ${{ secrets.FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: sistematarefassaude
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.FIREBASE_APP_ID }}
         run: npm ci && npm run build
 
-      - name: Deploy to Firebase Hosting
+      - name: Deploy to Firebase
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}

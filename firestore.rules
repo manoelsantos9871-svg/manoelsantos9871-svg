@@ -1,0 +1,145 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper functions ──────────────────────────────────────────────────────
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function userRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && userRole() == 'ADMIN';
+    }
+
+    function isAdminOrManager() {
+      return isAuthenticated() && userRole() in ['ADMIN', 'MANAGER'];
+    }
+
+    function isTechnician() {
+      return isAuthenticated() && userRole() == 'TECHNICIAN';
+    }
+
+    function isRequester() {
+      return isAuthenticated() && userRole() == 'REQUESTER';
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // ── Users ─────────────────────────────────────────────────────────────────
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdminOrManager();
+      allow update: if isAdminOrManager() || isOwner(userId);
+      allow delete: if isAdmin();
+    }
+
+    // ── Units ─────────────────────────────────────────────────────────────────
+    match /units/{unitId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdminOrManager();
+    }
+
+    // ── Categories ────────────────────────────────────────────────────────────
+    match /categories/{categoryId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdminOrManager();
+    }
+
+    // ── SLA Configs ───────────────────────────────────────────────────────────
+    match /slaConfigs/{slaId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdminOrManager();
+    }
+
+    // ── Demands ───────────────────────────────────────────────────────────────
+    match /demands/{demandId} {
+      allow read: if isAuthenticated();
+
+      // REQUESTER can create demands
+      allow create: if isAuthenticated();
+
+      // ADMIN, MANAGER can update any demand
+      // TECHNICIAN can update demands assigned to them
+      allow update: if isAdminOrManager()
+        || (isTechnician() && resource.data.assignedToId == request.auth.uid);
+
+      allow delete: if isAdminOrManager();
+
+      // Comments subcollection
+      match /comments/{commentId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated();
+        allow update, delete: if isAdminOrManager()
+          || isOwner(resource.data.author.id);
+      }
+
+      // History subcollection
+      match /history/{historyId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated();
+        allow update, delete: if isAdmin();
+      }
+    }
+
+    // ── Tasks ─────────────────────────────────────────────────────────────────
+    match /tasks/{taskId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdminOrManager() || isTechnician();
+      allow update: if isAdminOrManager()
+        || (isTechnician() && resource.data.assignedToId == request.auth.uid);
+      allow delete: if isAdminOrManager();
+
+      match /comments/{commentId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated();
+        allow update, delete: if isAdminOrManager();
+      }
+
+      match /timeEntries/{entryId} {
+        allow read: if isAuthenticated();
+        allow create: if isAuthenticated();
+        allow update, delete: if isAdminOrManager();
+      }
+    }
+
+    // ── Service Orders ────────────────────────────────────────────────────────
+    match /serviceOrders/{soId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdminOrManager() || isTechnician();
+      allow update: if isAdminOrManager()
+        || (isTechnician() && resource.data.executorId == request.auth.uid);
+      allow delete: if isAdminOrManager();
+
+      match /checklists/{checklistId} {
+        allow read: if isAuthenticated();
+        allow write: if isAdminOrManager()
+          || (isTechnician() && get(/databases/$(database)/documents/serviceOrders/$(soId)).data.executorId == request.auth.uid);
+      }
+    }
+
+    // ── Notifications ─────────────────────────────────────────────────────────
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow delete: if isAdminOrManager();
+    }
+
+    // ── Audit Logs ────────────────────────────────────────────────────────────
+    match /auditLogs/{logId} {
+      allow read: if isAdmin();
+      // Client-side writes are allowed so the app can record events without a backend.
+      // In a production setup with a backend, this would be restricted to server only.
+      allow create: if isAuthenticated();
+      allow update, delete: if false;
+    }
+  }
+}

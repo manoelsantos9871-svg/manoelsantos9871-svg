@@ -9,12 +9,12 @@ interface Props { onMenuClick: () => void }
 
 export default function Header({ onMenuClick }: Props) {
   const navigate = useNavigate();
-  const { user, refreshToken, logout } = useAuthStore();
+  const { user, logout } = useAuthStore();
   const { theme, toggleTheme } = useThemeStore();
 
   const handleLogout = async () => {
     try {
-      if (refreshToken) await authService.logout(refreshToken);
+      await authService.logout();
     } finally {
       logout();
       navigate('/login');
