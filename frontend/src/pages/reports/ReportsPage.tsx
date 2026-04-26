@@ -23,7 +23,7 @@ export default function ReportsPage() {
     value: d._count.type,
   })) || [];
 
-  const priorityChartData = byPriority?.map((d) => ({
+  const priorityChartData = byPriority?.map((d: { priority: string; _count: { priority: number } }) => ({
     name: PRIORITY_LABELS[d.priority as keyof typeof PRIORITY_LABELS],
     value: d._count.priority,
   })) || [];
@@ -79,7 +79,7 @@ export default function ReportsPage() {
               <YAxis tick={{ fontSize: 11 }} />
               <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
               <Bar dataKey="value" name="Demandas" radius={[4, 4, 0, 0]}>
-                {priorityChartData.map((_, i) => <Cell key={i} fill={['#ef4444','#f59e0b','#3b82f6','#22c55e'][i] || COLORS[i]} />)}
+                {priorityChartData.map((_d: unknown, i: number) => <Cell key={i} fill={['#ef4444','#f59e0b','#3b82f6','#22c55e'][i] || COLORS[i]} />)}
               </Bar>
             </BarChart>
           </ResponsiveContainer>

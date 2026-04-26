@@ -1,7 +1,6 @@
 import {
   collection,
   getDocs,
-  getDoc,
   doc,
   setDoc,
   query,
@@ -13,13 +12,6 @@ import {
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { DashboardOverview } from '@/types';
-
-function tsToIso(value: unknown): string {
-  if (!value) return new Date().toISOString();
-  if (value instanceof Timestamp) return value.toDate().toISOString();
-  if (typeof value === 'string') return value;
-  return new Date().toISOString();
-}
 
 export interface FullDashboard {
   overview: DashboardOverview;
@@ -165,6 +157,15 @@ export const dashboardService = {
   },
   async getDemandsByStatus() { return (await this.getFullDashboard()).byStatus; },
   async getDemandsByType() { return (await this.getFullDashboard()).byType; },
+  async getDemandsByPriority(): Promise<Array<{ priority: string; _count: { priority: number } }>> {
+    const snap = await getDocs(collection(db, 'demands'));
+    const counts: Record<string, number> = {};
+    snap.docs.forEach((d) => {
+      const p: string = d.data().priority ?? 'MEDIUM';
+      counts[p] = (counts[p] ?? 0) + 1;
+    });
+    return Object.entries(counts).map(([priority, count]) => ({ priority, _count: { priority: count } }));
+  },
   async getVolumeByPeriod(days = 30) { return (await this.getFullDashboard(days)).volume; },
   async getTopTechnicians() { return (await this.getFullDashboard()).technicians; },
   async getAvgResolutionTime() { return (await this.getFullDashboard()).avgTime; },
