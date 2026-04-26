@@ -1,0 +1,43 @@
+databases:
+  - name: healthtech-dets-db
+    databaseName: healthtech_dets
+    user: healthtech
+    plan: free
+
+services:
+  - type: web
+    name: healthtech-dets-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: healthtech-dets-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: FRONTEND_URL
+        value: https://healthtech-dets-frontend.onrender.com
+
+  - type: web
+    name: healthtech-dets-frontend
+    runtime: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    rootDir: frontend
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        value: https://healthtech-dets-backend.onrender.com/api
