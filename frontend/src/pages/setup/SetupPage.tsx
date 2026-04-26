@@ -64,23 +64,23 @@ export default function SetupPage() {
       const uid = credential.user.uid;
       const now = Timestamp.fromDate(new Date());
 
-      // 2. Create admin user document in Firestore
-      await setDoc(doc(db, 'users', uid), {
-        name: form.name,
-        email: form.email,
-        matricula: form.matricula,
-        role: 'ADMIN',
-        sector: form.sector,
-        status: 'ACTIVE',
-        mfaEnabled: false,
-        lastLoginAt: null,
-        createdAt: now,
-        updatedAt: now,
-      });
-
-      // 3. Seed initial data
+      // 2. Create user doc + seed in parallel
       setStep('seeding');
-      const result = await runSeed(db);
+      const [, result] = await Promise.all([
+        setDoc(doc(db, 'users', uid), {
+          name: form.name,
+          email: form.email,
+          matricula: form.matricula,
+          role: 'ADMIN',
+          sector: form.sector,
+          status: 'ACTIVE',
+          mfaEnabled: false,
+          lastLoginAt: null,
+          createdAt: now,
+          updatedAt: now,
+        }),
+        runSeed(db),
+      ]);
       setSeedResult(result);
       setStep('done');
     } catch (err: unknown) {
