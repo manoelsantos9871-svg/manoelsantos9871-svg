@@ -1,4 +1,4 @@
-name: Deploy — Firebase + Cloud Run
+name: Deploy — Firebase Hosting
 
 on:
   push:
@@ -6,44 +6,9 @@ on:
       - claude/healthcare-task-management-m4DfU
 
 jobs:
-  deploy-backend:
-    name: Backend → Cloud Run
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-
-      - name: Configure Docker
-        run: gcloud auth configure-docker gcr.io --quiet
-
-      - name: Build and push image
-        working-directory: backend
-        run: |
-          docker build -t gcr.io/sistematarefassaude/healthtech-dets-backend:${{ github.sha }} .
-          docker push gcr.io/sistematarefassaude/healthtech-dets-backend:${{ github.sha }}
-
-      - name: Deploy to Cloud Run
-        run: |
-          gcloud run deploy healthtech-dets-backend \
-            --image gcr.io/sistematarefassaude/healthtech-dets-backend:${{ github.sha }} \
-            --platform managed \
-            --region us-central1 \
-            --allow-unauthenticated \
-            --port 3001 \
-            --set-env-vars "NODE_ENV=production,PORT=3001,DATABASE_URL=${{ secrets.DATABASE_URL }},JWT_SECRET=${{ secrets.JWT_SECRET }},JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }},FRONTEND_URL=https://sistematarefassaude.web.app" \
-            --project sistematarefassaude
-
   deploy-frontend:
     name: Frontend → Firebase Hosting
     runs-on: ubuntu-latest
-    needs: deploy-backend
     steps:
       - uses: actions/checkout@v4
 
@@ -55,12 +20,14 @@ jobs:
 
       - name: Build frontend
         working-directory: frontend
+        env:
+          VITE_API_URL: ${{ secrets.BACKEND_URL }}
         run: npm ci && npm run build
 
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.GCP_SA_KEY }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           channelId: live
           projectId: sistematarefassaude
