@@ -26,19 +26,19 @@ jobs:
       - name: Build and push image
         working-directory: backend
         run: |
-          docker build -t gcr.io/${{ secrets.GCP_PROJECT_ID }}/healthtech-dets-backend:${{ github.sha }} .
-          docker push gcr.io/${{ secrets.GCP_PROJECT_ID }}/healthtech-dets-backend:${{ github.sha }}
+          docker build -t gcr.io/sistematarefassaude/healthtech-dets-backend:${{ github.sha }} .
+          docker push gcr.io/sistematarefassaude/healthtech-dets-backend:${{ github.sha }}
 
       - name: Deploy to Cloud Run
         run: |
           gcloud run deploy healthtech-dets-backend \
-            --image gcr.io/${{ secrets.GCP_PROJECT_ID }}/healthtech-dets-backend:${{ github.sha }} \
+            --image gcr.io/sistematarefassaude/healthtech-dets-backend:${{ github.sha }} \
             --platform managed \
             --region us-central1 \
             --allow-unauthenticated \
             --port 3001 \
-            --set-env-vars "NODE_ENV=production,PORT=3001,DATABASE_URL=${{ secrets.DATABASE_URL }},JWT_SECRET=${{ secrets.JWT_SECRET }},JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }},FRONTEND_URL=https://${{ secrets.GCP_PROJECT_ID }}.web.app" \
-            --project ${{ secrets.GCP_PROJECT_ID }}
+            --set-env-vars "NODE_ENV=production,PORT=3001,DATABASE_URL=${{ secrets.DATABASE_URL }},JWT_SECRET=${{ secrets.JWT_SECRET }},JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }},FRONTEND_URL=https://sistematarefassaude.web.app" \
+            --project sistematarefassaude
 
   deploy-frontend:
     name: Frontend → Firebase Hosting
@@ -63,4 +63,4 @@ jobs:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.GCP_SA_KEY }}
           channelId: live
-          projectId: ${{ secrets.GCP_PROJECT_ID }}
+          projectId: sistematarefassaude
